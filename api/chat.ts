@@ -7,13 +7,14 @@ export const config = {
 
 const openai = createOpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: 'https://api.deepseek.com',
+  baseURL: 'https://api.deepseek.com/v1',
 });
 
 export default async function handler(req: Request) {
-  const { messages, context } = await req.json();
+  try {
+    const { messages, context } = await req.json();
 
-  const systemPrompt = `
+    const systemPrompt = `
 You are an expert Java Technical Interview Tutor.
 Your goal is to help students understand Java concepts, analyze their mistakes, and provide clear explanations.
 
@@ -31,19 +32,19 @@ Instructions:
 5. Use Markdown formatting.
 `;
 
-  const result = await streamText({
-    model: openai('deepseek-chat'),
-    system: systemPrompt,
-    messages,
-  });
+    const result = await streamText({
+      model: openai('deepseek-chat'),
+      system: systemPrompt,
+      messages,
+    });
 
-  // @ts-ignore
-  if (result.toDataStreamResponse) {
     // @ts-ignore
     return result.toDataStreamResponse();
+  } catch (error: any) {
+    console.error('API Error:', error);
+    return new Response(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
-  
-  // Fallback for older SDK versions
-  // @ts-ignore
-  return result.toTextStreamResponse();
 }

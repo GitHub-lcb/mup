@@ -68,7 +68,7 @@ export default function QuestionDetailPage() {
       .select('id')
       .eq('user_id', user.id)
       .eq('question_id', questionId)
-      .single();
+      .maybeSingle();
     
     setIsFavorite(!!data);
   };

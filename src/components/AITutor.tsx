@@ -23,6 +23,10 @@ export default function AITutor({ question, userAnswer, correctAnswer, isOpen, o
   const { messages, append, isLoading, setMessages } = useChat({
     // @ts-ignore
     api: '/api/chat',
+    onError: (error) => {
+      console.error('AI Chat Error:', error);
+      alert('AI 响应出错，请稍后重试: ' + error.message);
+    },
     body: {
       context: {
         title: question.title,
