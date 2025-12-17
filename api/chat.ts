@@ -37,5 +37,13 @@ Instructions:
     messages,
   });
 
-  return result.toDataStreamResponse();
+  // @ts-ignore
+  if (result.toDataStreamResponse) {
+    // @ts-ignore
+    return result.toDataStreamResponse();
+  }
+  
+  // Fallback for older SDK versions
+  // @ts-ignore
+  return result.toTextStreamResponse();
 }

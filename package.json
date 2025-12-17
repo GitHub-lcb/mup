@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.88",
+    "@ai-sdk/react": "^2.0.116",
     "@headlessui/react": "^2.2.9",
     "@supabase/supabase-js": "^2.88.0",
     "@tailwindcss/typography": "^0.5.19",

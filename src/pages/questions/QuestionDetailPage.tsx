@@ -356,7 +356,6 @@ export default function QuestionDetailPage() {
               <h3 className={`text-lg font-bold ${isCorrect ? 'text-green-800' : 'text-red-800'}`}>
                 {isCorrect ? '回答正确！' : '回答错误'}
               </h3>
-</div>
             </div>
             
             <div className="mt-4 flex justify-end">
