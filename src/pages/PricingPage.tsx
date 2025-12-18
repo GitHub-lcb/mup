@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { Check, Crown, Zap } from 'lucide-react';
+import { Check, Crown } from 'lucide-react';
 
 export default function PricingPage() {
   const { user } = useAuth();
@@ -15,37 +15,43 @@ export default function PricingPage() {
       return;
     }
 
-    if (confirm('确认支付 ¥99 升级为永久 Pro 会员吗？(模拟支付)')) {
-      setProcessing(true);
-      try {
-        // 1. Create order record
-        const { error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            user_id: user.id,
-            amount: 99.00,
-            status: 'completed'
-          });
+    setProcessing(true);
+    try {
+      // 1. Get Access Token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session');
 
-        if (orderError) throw orderError;
+      // 2. Call Backend API to create Checkout Session
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token: session.access_token,
+          successUrl: `${window.location.origin}/questions?upgraded=true`,
+          cancelUrl: window.location.href,
+        }),
+      });
 
-        // 2. Update user status
-        const { error: userError } = await supabase
-          .from('users')
-          .update({ is_pro: true })
-          .eq('id', user.id);
-
-        if (userError) throw userError;
-
-        alert('升级成功！尽情享受高级题目吧！');
-        // Force reload or redirect to questions
-        window.location.href = '/questions'; 
-      } catch (error) {
-        console.error('Upgrade failed:', error);
-        alert('升级失败，请稍后重试');
-      } finally {
-        setProcessing(false);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Payment initiation failed');
       }
+
+      const { url } = await response.json();
+
+      // 3. Redirect to Stripe
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (error: any) {
+      console.error('Upgrade failed:', error);
+      alert('支付启动失败，请稍后重试: ' + error.message);
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -82,8 +88,11 @@ export default function PricingPage() {
                 user?.is_pro ? 'opacity-50 cursor-not-allowed bg-green-600 hover:bg-green-600' : ''
               }`}
             >
-              {user?.is_pro ? '您已是尊贵的 Pro 会员' : processing ? '处理中...' : '立即升级'}
+              {user?.is_pro ? '您已是尊贵的 Pro 会员' : processing ? '正在前往支付...' : '立即升级'}
             </button>
+            <p className="mt-4 text-xs text-center text-gray-400">
+              支持支付宝 / 微信支付 (通过 Stripe)
+            </p>
           </div>
 
           <div className="pt-6 pb-8 px-8 bg-gray-50 rounded-b-2xl">
