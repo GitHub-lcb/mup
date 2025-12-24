@@ -20,35 +20,45 @@ graph TD
 ```
 
 ## 2. 技术栈描述
-- **前端**: React@18 + TypeScript + TailwindCSS@3 + Vite
-- **初始化工具**: vite-init
-- **后端**: Supabase (BaaS)
-- **状态管理**: React Context + useReducer
-- **路由**: React Router@6
-- **UI组件**: HeadlessUI + 自定义组件
-- **图表**: Chart.js + react-chartjs-2
-- **代码高亮**: Prism.js
+
+* **前端**: React\@18 + TypeScript + TailwindCSS\@3 + Vite
+
+* **初始化工具**: vite-init
+
+* **后端**: Supabase (BaaS)
+
+* **状态管理**: React Context + useReducer
+
+* **路由**: React Router\@6
+
+* **UI组件**: HeadlessUI + 自定义组件
+
+* **图表**: Chart.js + react-chartjs-2
+
+* **代码高亮**: Prism.js
 
 ## 3. 路由定义
-| 路由 | 用途 |
-|-------|---------|
-| / | 首页，展示分类导航和学习概览 |
-| /questions | 题目列表页，支持分类和难度筛选 |
-| /questions/:id | 题目详情页，展示题目内容和答题功能 |
-| /progress | 学习进度页，显示统计数据和分析 |
-| /favorites | 收藏夹页，管理收藏的题目标题 |
-| /profile | 用户中心，个人信息和设置 |
-| /auth/login | 登录页面 |
-| /auth/register | 注册页面 |
-| /admin | 管理后台首页 |
-| /admin/questions | 题目管理页面 |
-| /admin/categories | 分类管理页面 |
-| /admin/users | 用户管理页面 |
-| /admin/statistics | 数据统计页面 |
+
+| 路由                | 用途                |
+| ----------------- | ----------------- |
+| /                 | 首页，展示分类导航和学习概览    |
+| /questions        | 题目列表页，支持分类和难度筛选   |
+| /questions/:id    | 题目详情页，展示题目内容和答题功能 |
+| /progress         | 学习进度页，显示统计数据和分析   |
+| /favorites        | 收藏夹页，管理收藏的题目标题    |
+| /profile          | 用户中心，个人信息和设置      |
+| /auth/login       | 登录页面              |
+| /auth/register    | 注册页面              |
+| /admin            | 管理后台首页            |
+| /admin/questions  | 题目管理页面            |
+| /admin/categories | 分类管理页面            |
+| /admin/users      | 用户管理页面            |
+| /admin/statistics | 数据统计页面            |
 
 ## 4. 数据模型
 
 ### 4.1 数据模型定义
+
 ```mermaid
 erDiagram
   USERS ||--o{ QUESTION_ATTEMPTS : makes
@@ -131,6 +141,7 @@ erDiagram
 ### 4.2 数据定义语言
 
 用户表 (users)
+
 ```sql
 -- 创建用户表
 CREATE TABLE users (
@@ -149,6 +160,7 @@ CREATE INDEX idx_users_role ON users(role);
 ```
 
 分类表 (categories)
+
 ```sql
 -- 创建分类表
 CREATE TABLE categories (
@@ -178,6 +190,7 @@ INSERT INTO categories (name, description, icon, sort_order) VALUES
 ```
 
 题目表 (questions)
+
 ```sql
 -- 创建题目表
 CREATE TABLE questions (
@@ -208,7 +221,8 @@ CREATE INDEX idx_questions_active ON questions(is_active);
 CREATE INDEX idx_questions_created ON questions(created_at DESC);
 ```
 
-答题记录表 (question_attempts)
+答题记录表 (question\_attempts)
+
 ```sql
 -- 创建答题记录表
 CREATE TABLE question_attempts (
@@ -229,6 +243,7 @@ CREATE INDEX idx_attempts_user_question ON question_attempts(user_id, question_i
 ```
 
 收藏表 (favorites)
+
 ```sql
 -- 创建收藏表
 CREATE TABLE favorites (
@@ -246,7 +261,8 @@ CREATE INDEX idx_favorites_question ON favorites(question_id);
 CREATE INDEX idx_favorites_created ON favorites(created_at DESC);
 ```
 
-学习进度表 (learning_progress)
+学习进度表 (learning\_progress)
+
 ```sql
 -- 创建学习进度表
 CREATE TABLE learning_progress (
@@ -269,6 +285,7 @@ CREATE INDEX idx_progress_updated ON learning_progress(updated_at DESC);
 ```
 
 ### 4.3 权限设置
+
 ```sql
 -- 匿名用户权限 (基本访问)
 GRANT SELECT ON categories TO anon;
@@ -303,37 +320,60 @@ CREATE POLICY "用户只能查看自己的学习进度" ON learning_progress
 ## 5. 核心功能实现
 
 ### 5.1 题目推荐算法
+
 基于用户的历史答题数据，使用协同过滤和内容推荐相结合的方式：
-- 分析用户的答题正确率和时间分布
-- 推荐相似难度和知识点的题目
-- 优先推荐用户未接触过的题目
+
+* 分析用户的答题正确率和时间分布
+
+* 推荐相似难度和知识点的题目
+
+* 优先推荐用户未接触过的题目
 
 ### 5.2 学习进度计算
-- 分类进度：已答题数/总题数 × 100%
-- 整体进度：所有分类进度的加权平均
-- 掌握程度：基于答题正确率和重复练习次数的综合评分
+
+* 分类进度：已答题数/总题数 × 100%
+
+* 整体进度：所有分类进度的加权平均
+
+* 掌握程度：基于答题正确率和重复练习次数的综合评分
 
 ### 5.3 搜索优化
-- 使用PostgreSQL的全文搜索功能
-- 支持题目内容、标题、标签的多字段搜索
-- 实现搜索结果的智能排序和相关性评分
+
+* 使用PostgreSQL的全文搜索功能
+
+* 支持题目内容、标题、标签的多字段搜索
+
+* 实现搜索结果的智能排序和相关性评分
 
 ## 6. 性能优化
 
 ### 6.1 前端优化
-- 使用React.memo和useMemo优化组件渲染
-- 实现虚拟滚动处理大量题目列表
-- 使用Service Worker实现离线缓存
-- 图片和资源使用懒加载
+
+* 使用React.memo和useMemo优化组件渲染
+
+* 实现虚拟滚动处理大量题目列表
+
+* 使用Service Worker实现离线缓存
+
+* 图片和资源使用懒加载
 
 ### 6.2 数据库优化
-- 为常用查询字段建立索引
-- 使用物化视图缓存统计数
-- 定期清理过期数据
-- 使用数据库连接池
+
+* 为常用查询字段建立索引
+
+* 使用物化视图缓存统计数
+
+* 定期清理过期数据
+
+* 使用数据库连接池
 
 ### 6.3 缓存策略
-- 题目数据使用浏览器缓存
-- 用户进度数据使用本地存储
-- 统计结果使用Redis缓存（如需要）
-- CDN加速静态资源加载
+
+* 题目数据使用浏览器缓存
+
+* 用户进度数据使用本地存储
+
+* 统计结果使用Redis缓存（如需要）
+
+* CDN加速静态资源加载
+
