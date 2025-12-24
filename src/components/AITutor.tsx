@@ -19,9 +19,7 @@ interface AITutorProps {
 export default function AITutor({ question, userAnswer, correctAnswer, isOpen, onClose }: AITutorProps) {
   const [localInput, setLocalInput] = useState('');
 
-  // @ts-ignore
-  const { messages, append, isLoading, setMessages } = useChat({
-    // @ts-ignore
+  const chatHelpers = useChat({
     api: '/api/chat',
     onError: (error) => {
       console.error('AI Chat Error:', error);
@@ -36,6 +34,8 @@ export default function AITutor({ question, userAnswer, correctAnswer, isOpen, o
       },
     },
   });
+
+  const { messages, append, isLoading, setMessages } = chatHelpers;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
