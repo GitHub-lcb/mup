@@ -6,7 +6,7 @@ import clsx from 'clsx';
 const navigation = [
   { name: '概览', href: '/admin', icon: LayoutDashboard, exact: true },
   { name: '题目管理', href: '/admin/questions', icon: FileText, exact: false },
-  // { name: '用户管理', href: '/admin/users', icon: Users, exact: false },
+  { name: '用户管理', href: '/admin/users', icon: Users, exact: false },
   // { name: '设置', href: '/admin/settings', icon: Settings, exact: false },
 ];
 

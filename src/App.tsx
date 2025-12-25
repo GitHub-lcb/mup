@@ -17,6 +17,7 @@ import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminQuestionList from './pages/admin/AdminQuestionList';
 import AdminQuestionEditor from './pages/admin/AdminQuestionEditor';
+import AdminUserList from './pages/admin/AdminUserList';
 import { AuthProvider } from './context/AuthContext';
 
 function App() {
@@ -47,6 +48,7 @@ function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="questions" element={<AdminQuestionList />} />
+            <Route path="users" element={<AdminUserList />} />
             <Route path="questions/new" element={<AdminQuestionEditor />} />
             <Route path="questions/:id" element={<AdminQuestionEditor />} />
           </Route>
