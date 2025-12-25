@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { MessageSquare, Send, Trash2, User as UserIcon } from 'lucide-react';
 
@@ -32,23 +32,7 @@ export default function CommentsSection({ questionId }: CommentsSectionProps) {
 
   const fetchComments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('comments')
-        .select(`
-          id,
-          content,
-          created_at,
-          user_id,
-          users (
-            nickname,
-            email
-          )
-        `)
-        .eq('question_id', questionId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      // @ts-ignore
+      const data = await api.comments.list(questionId) as any;
       setComments(data || []);
     } catch (error) {
       console.error('Error fetching comments:', error);
@@ -63,13 +47,10 @@ export default function CommentsSection({ questionId }: CommentsSectionProps) {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('comments').insert({
+      await api.comments.create({
         question_id: questionId,
-        user_id: user.id,
         content: newComment.trim(),
       });
-
-      if (error) throw error;
       
       setNewComment('');
       fetchComments(); // Refresh list
@@ -85,12 +66,7 @@ export default function CommentsSection({ questionId }: CommentsSectionProps) {
     if (!confirm('确定要删除这条评论吗？')) return;
 
     try {
-      const { error } = await supabase
-        .from('comments')
-        .delete()
-        .eq('id', commentId);
-
-      if (error) throw error;
+      await api.comments.delete(commentId);
       setComments(prev => prev.filter(c => c.id !== commentId));
     } catch (error) {
       console.error('Error deleting comment:', error);

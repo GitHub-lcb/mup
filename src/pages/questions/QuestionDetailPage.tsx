@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import api from '../../lib/api';
 import { Question } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { Star, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
@@ -42,13 +42,7 @@ export default function QuestionDetailPage() {
 
   const fetchQuestion = async (questionId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('questions')
-        .select('*')
-        .eq('id', questionId)
-        .single();
-
-      if (error) throw error;
+      const data = await api.questions.get(questionId) as Question;
       setQuestion(data);
       // Reset state when question changes
       setSelectedOption(data.type === 'multiple' ? [] : null);
@@ -63,14 +57,12 @@ export default function QuestionDetailPage() {
 
   const checkFavorite = async (questionId: string) => {
     if (!user) return;
-    const { data } = await supabase
-      .from('favorites')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('question_id', questionId)
-      .maybeSingle();
-    
-    setIsFavorite(!!data);
+    try {
+      const result = await api.favorites.check(questionId) as { isFavorite: boolean };
+      setIsFavorite(result.isFavorite);
+    } catch (error) {
+      console.error('Error checking favorite:', error);
+    }
   };
 
   const toggleFavorite = async () => {
@@ -78,19 +70,10 @@ export default function QuestionDetailPage() {
 
     try {
       if (isFavorite) {
-        await supabase
-          .from('favorites')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('question_id', question.id);
+        await api.favorites.remove(question.id);
         setIsFavorite(false);
       } else {
-        await supabase
-          .from('favorites')
-          .insert({
-            user_id: user.id,
-            question_id: question.id,
-          });
+        await api.favorites.add({ question_id: question.id });
         setIsFavorite(true);
       }
     } catch (error) {
@@ -140,8 +123,7 @@ export default function QuestionDetailPage() {
 
     if (user) {
       try {
-        await supabase.from('question_attempts').insert({
-          user_id: user.id,
+        await api.attempts.create({
           question_id: question.id,
           user_answer: userAnswerStr,
           is_correct: correct,

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { Check, Crown, Zap } from 'lucide-react';
+import { Check, Crown } from 'lucide-react';
+import api from '../lib/api';
 
 export default function PricingPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [processing, setProcessing] = useState(false);
 
@@ -15,37 +15,25 @@ export default function PricingPage() {
       return;
     }
 
-    if (confirm('确认支付 ¥99 升级为永久 Pro 会员吗？(模拟支付)')) {
-      setProcessing(true);
-      try {
-        // 1. Create order record
-        const { error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            user_id: user.id,
-            amount: 99.00,
-            status: 'completed'
-          });
+    if (user.is_pro) {
+      return;
+    }
 
-        if (orderError) throw orderError;
-
-        // 2. Update user status
-        const { error: userError } = await supabase
-          .from('users')
-          .update({ is_pro: true })
-          .eq('id', user.id);
-
-        if (userError) throw userError;
-
-        alert('升级成功！尽情享受高级题目吧！');
-        // Force reload or redirect to questions
-        window.location.href = '/questions'; 
-      } catch (error) {
-        console.error('Upgrade failed:', error);
-        alert('升级失败，请稍后重试');
-      } finally {
-        setProcessing(false);
-      }
+    setProcessing(true);
+    try {
+      await api.users.upgrade();
+      alert('🎉 升级成功！尽情享受高级题目吧！');
+      
+      // 刷新用户信息
+      await refreshUser();
+      
+      // 跳转到题目列表
+      navigate('/questions');
+    } catch (error: any) {
+      console.error('Upgrade failed:', error);
+      alert('升级失败，请稍后重试');
+    } finally {
+      setProcessing(false);
     }
   };
 

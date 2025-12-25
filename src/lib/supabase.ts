@@ -1,10 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+// @deprecated - This file is deprecated. Use api.ts instead.
+// Kept for backward compatibility during migration.
+// All Supabase functionality has been replaced with custom API.
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Export a dummy object to prevent import errors
+// Pages still importing this should be migrated to use api.ts
+export const supabase = null as any;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// TODO: Remove this file once all components are migrated to api.ts

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 import { Category } from '../types';
 import * as Icons from 'lucide-react';
 import { ArrowRight, BookOpen, Check, Star } from 'lucide-react';
@@ -17,12 +17,7 @@ export default function HomePage() {
 
   const fetchCategories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('sort_order', { ascending: true });
-
-      if (error) throw error;
+      const data: any = await api.categories.list();
       setCategories(data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -66,7 +61,7 @@ export default function HomePage() {
       <section className="text-center pt-12 md:pt-20 max-w-3xl mx-auto">
         <div className="inline-flex items-center px-3 py-1 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-600 mb-8">
           <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-          备战 2024 金三银四
+          备战 2026 金三银四
         </div>
         
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-gray-900 mb-8 leading-[1.1]">

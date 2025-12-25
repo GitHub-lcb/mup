@@ -1,7 +1,12 @@
-import { useChat } from '@ai-sdk/react';
 import { Bot, X, Send, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 interface AITutorProps {
   question: {
@@ -18,28 +23,8 @@ interface AITutorProps {
 
 export default function AITutor({ question, userAnswer, correctAnswer, isOpen, onClose }: AITutorProps) {
   const [localInput, setLocalInput] = useState('');
-
-  // @ts-ignore
-  const chatHelpers = useChat({
-    // @ts-ignore
-    api: '/api/chat',
-    onError: (error) => {
-      console.error('AI Chat Error:', error);
-      alert('AI 响应出错，请稍后重试: ' + error.message);
-    },
-    body: {
-      context: {
-        title: question.title,
-        content: question.content,
-        userAnswer,
-        correctAnswer,
-      },
-    },
-  });
-
-  // @ts-ignore
-  const { messages, append, isLoading, setMessages } = chatHelpers;
-
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -61,7 +46,6 @@ export default function AITutor({ question, userAnswer, correctAnswer, isOpen, o
         {
           id: 'welcome',
           role: 'assistant',
-          // @ts-ignore
           content: '你好！我是你的 AI 面试助教。关于这道题，你有什么想问的吗？我可以帮你分析错误原因，或者讲解相关知识点。',
         },
       ]);
@@ -72,13 +56,117 @@ export default function AITutor({ question, userAnswer, correctAnswer, isOpen, o
     e.preventDefault();
     if (!localInput.trim() || isLoading) return;
 
-    const content = localInput;
-    setLocalInput(''); // Clear input immediately
-    
-    await append({
+    const userMessage: Message = {
+      id: Date.now().toString(),
       role: 'user',
-      content: content,
-    });
+      content: localInput.trim(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setLocalInput('');
+    setIsLoading(true);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const response = await fetch(`${apiUrl}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map(m => ({
+            role: m.role,
+            content: m.content,
+          })),
+          context: {
+            title: question.title,
+            content: question.content,
+            userAnswer,
+            correctAnswer,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('AI 响应失败');
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let assistantContent = '';
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: '',
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+
+      if (reader) {
+        let buffer = '';
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (!line.trim() || !line.startsWith('0:')) continue;
+            
+            try {
+              const jsonStr = line.substring(2);
+              const data = JSON.parse(jsonStr);
+              
+              if (data) {
+                assistantContent += data;
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  newMessages[newMessages.length - 1] = {
+                    ...newMessages[newMessages.length - 1],
+                    content: assistantContent,
+                  };
+                  return newMessages;
+                });
+                await new Promise(resolve => setTimeout(resolve, 0));
+              }
+            } catch (e) {
+              // 忽略解析错误
+            }
+          }
+        }
+        
+        // 处理剩余的buffer
+        if (buffer.trim() && buffer.startsWith('0:')) {
+          try {
+            const jsonStr = buffer.substring(2);
+            const data = JSON.parse(jsonStr);
+            if (data) {
+              assistantContent += data;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                newMessages[newMessages.length - 1] = {
+                  ...newMessages[newMessages.length - 1],
+                  content: assistantContent,
+                };
+                return newMessages;
+              });
+            }
+          } catch (e) {
+            // 忽略解析错误
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('AI Chat Error:', error);
+      alert('AI 响应出错，请稍后重试');
+      setMessages(prev => prev.slice(0, -1)); // Remove the empty assistant message
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -116,8 +204,7 @@ export default function AITutor({ question, userAnswer, correctAnswer, isOpen, o
               }`}
             >
               <div className="prose prose-sm max-w-none dark:prose-invert">
-                 {/* @ts-ignore */}
-                 <ReactMarkdown>{m.content}</ReactMarkdown>
+                <ReactMarkdown>{m.content}</ReactMarkdown>
               </div>
             </div>
           </div>

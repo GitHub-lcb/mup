@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import api from '../../lib/api';
 import { Category, Question } from '../../types';
 import { Search, Filter, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 
@@ -28,38 +28,26 @@ export default function QuestionListPage() {
   }, [categoryId, difficulty, searchTerm, page]);
 
   const fetchCategories = async () => {
-    const { data } = await supabase.from('categories').select('*').order('sort_order');
+    const data: any = await api.categories.list();
     if (data) setCategories(data);
   };
 
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from('questions')
-        .select('*', { count: 'exact' })
-        .eq('is_active', true);
+      const params: any = {
+        page,
+        limit: PAGE_SIZE,
+        is_active: 'true'
+      };
 
-      if (categoryId) {
-        query = query.eq('category_id', categoryId);
-      }
-      if (difficulty) {
-        query = query.eq('difficulty', difficulty);
-      }
-      if (searchTerm) {
-        query = query.ilike('title', `%${searchTerm}%`);
-      }
+      if (categoryId) params.category_id = categoryId;
+      if (difficulty) params.difficulty = difficulty;
+      if (searchTerm) params.search = searchTerm;
 
-      const from = (page - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-
-      const { data, error, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
-
-      if (error) throw error;
-      setQuestions(data || []);
-      setTotalCount(count || 0);
+      const response: any = await api.questions.list(params);
+      setQuestions(response.data || []);
+      setTotalCount(response.total || 0);
     } catch (error) {
       console.error('Error fetching questions:', error);
     } finally {

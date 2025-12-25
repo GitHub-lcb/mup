@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
 import { Users, FileText, CheckCircle, Eye } from 'lucide-react';
+import api from '../../lib/api';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -18,24 +18,22 @@ export default function AdminDashboard() {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const [
-        { count: userCount },
-        { count: questionCount },
-        { count: attemptCount },
-        { data: questions },
-      ] = await Promise.all([
-        supabase.from('users').select('*', { count: 'exact', head: true }),
-        supabase.from('questions').select('*', { count: 'exact', head: true }),
-        supabase.from('question_attempts').select('*', { count: 'exact', head: true }),
-        supabase.from('questions').select('view_count'),
-      ]);
-
-      const totalViews = questions?.reduce((sum, q) => sum + (q.view_count || 0), 0) || 0;
+      
+      // 获取用户数量
+      const users = await api.users.list() as any[];
+      
+      // 获取题目数据
+      const questionsData = await api.questions.list() as any;
+      const questions = questionsData.questions || [];
+      
+      // 计算总浏览量（如果后端没有返回，需要单独接口）
+      const totalViews = questions.reduce((sum: number, q: any) => sum + (q.view_count || 0), 0);
+      const totalAttempts = questions.reduce((sum: number, q: any) => sum + (q.attempt_count || 0), 0);
 
       setStats({
-        userCount: userCount || 0,
-        questionCount: questionCount || 0,
-        attemptCount: attemptCount || 0,
+        userCount: users.length || 0,
+        questionCount: questions.length || 0,
+        attemptCount: totalAttempts || 0,
         viewCount: totalViews,
       });
     } catch (error) {

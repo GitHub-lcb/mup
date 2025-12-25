@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -8,6 +8,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { signIn } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,15 +16,10 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
+      await signIn(email, password);
       navigate('/');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || '登录失败');
     } finally {
       setLoading(false);
     }

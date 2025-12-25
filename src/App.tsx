@@ -13,6 +13,8 @@ import MistakesPage from './pages/user/MistakesPage';
 import DailyChallengePage from './pages/DailyChallengePage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import PricingPage from './pages/PricingPage';
+import MoveItemsPage from './pages/MoveItemsPage';
+import MoveItemsDemo from './pages/MoveItemsDemo';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminQuestionList from './pages/admin/AdminQuestionList';
@@ -33,6 +35,8 @@ function App() {
           <Route path="auth/register" element={<RegisterPage />} />
           <Route path="questions" element={<QuestionListPage />} />
           <Route path="questions/:id" element={<QuestionDetailPage />} />
+          <Route path="move-items" element={<MoveItemsPage />} />
+          <Route path="move-items-demo" element={<MoveItemsDemo />} />
           
           {/* User Protected Routes */}
           <Route element={<ProtectedRoute />}>

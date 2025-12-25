@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -9,6 +9,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { signUp } = useAuth();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,22 +17,11 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            nickname,
-          },
-          emailRedirectTo: window.location.origin,
-        },
-      });
-
-      if (error) throw error;
-      alert('注册成功！请检查邮箱完成验证（如果是开发环境可能已自动登录）。');
-      navigate('/auth/login');
+      await signUp(email, password, nickname);
+      alert('注册成功！');
+      navigate('/');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || '注册失败');
     } finally {
       setLoading(false);
     }

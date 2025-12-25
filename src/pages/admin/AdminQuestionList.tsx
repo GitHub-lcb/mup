@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
 import { Question, Category } from '../../types';
 import { Plus, Edit, Trash2, Search, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
+import api from '../../lib/api';
 
 const PAGE_SIZE = 10;
 
@@ -29,38 +29,36 @@ export default function AdminQuestionList() {
   }, [searchTerm, selectedCategory, page]);
 
   const fetchCategories = async () => {
-    const { data } = await supabase.from('categories').select('*').order('sort_order');
-    if (data) setCategories(data);
+    try {
+      const data = await api.categories.list() as Category[];
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
   };
 
   const fetchQuestions = async () => {
     try {
       setLoading(true);
-      let query = supabase
-        .from('questions')
-        .select('*', { count: 'exact' });
-
-      // Apply filters
+      
+      const params: any = {
+        page,
+        limit: PAGE_SIZE,
+      };
+      
       if (searchTerm) {
-        query = query.ilike('title', `%${searchTerm}%`);
+        params.search = searchTerm;
       }
-
+      
       if (selectedCategory !== 'all') {
-        query = query.eq('category_id', selectedCategory);
+        params.category_id = selectedCategory;
       }
-
-      // Pagination
-      const from = (page - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-
-      const { data, error, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
-
-      if (error) throw error;
-
+      
+      const response = await api.questions.list(params) as any;
+      const { questions: data, total } = response;
+      
       setQuestions(data || []);
-      setTotalCount(count || 0);
+      setTotalCount(total || 0);
     } catch (error) {
       console.error('Error fetching questions:', error);
     } finally {
@@ -72,10 +70,7 @@ export default function AdminQuestionList() {
     if (!window.confirm('确定要删除这道题目吗？此操作不可恢复。')) return;
 
     try {
-      const { error } = await supabase.from('questions').delete().eq('id', id);
-      if (error) throw error;
-      
-      // Refresh list
+      await api.questions.delete(id);
       fetchQuestions();
     } catch (error) {
       console.error('Error deleting question:', error);

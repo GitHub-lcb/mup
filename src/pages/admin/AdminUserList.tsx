@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
 import { User } from '../../types';
-import { Search, Edit2, Shield, ShieldAlert, Check, X, Loader2 } from 'lucide-react';
+import { Search, Edit2, Check, X, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import api from '../../lib/api';
 
 export default function AdminUserList() {
   const [users, setUsers] = useState<User[]>([]);
@@ -18,12 +18,7 @@ export default function AdminUserList() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const data = await api.users.list() as User[];
       setUsers(data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -39,16 +34,10 @@ export default function AdminUserList() {
 
     try {
       setSaving(true);
-      const { error } = await supabase
-        .from('users')
-        .update({
-          role: editingUser.role,
-          is_pro: editingUser.is_pro,
-          nickname: editingUser.nickname
-        })
-        .eq('id', editingUser.id);
-
-      if (error) throw error;
+      await api.users.update(editingUser.id, {
+        role: editingUser.role,
+        nickname: editingUser.nickname
+      });
 
       // Update local state
       setUsers(users.map(u => u.id === editingUser.id ? editingUser : u));

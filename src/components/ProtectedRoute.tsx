@@ -7,13 +7,13 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ requireAdmin = false }: ProtectedRouteProps) {
-  const { user, loading, session } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
-  if (!session || !user) {
+  if (!user) {
     return <Navigate to="/auth/login" replace />;
   }
 
