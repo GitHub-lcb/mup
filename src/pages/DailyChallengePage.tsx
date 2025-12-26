@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import { Question } from '../types';
 import { Calendar, CheckCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import api from '../lib/api';
 
 export default function DailyChallengePage() {
   const { user } = useAuth();
@@ -18,27 +18,16 @@ export default function DailyChallengePage() {
   const fetchDailyQuestions = async () => {
     try {
       setLoading(true);
-      // Generate a seed based on today's date (YYYY-MM-DD)
-      // This ensures everyone gets the same "random" questions for the day
       const today = new Date().toISOString().split('T')[0];
-      const seed = today.split('-').join(''); // e.g. "20231027"
+      const seed = today.split('-').join('');
       
-      // Since Supabase/Postgres random() is not seedable per request easily without stored procedures,
-      // and we want a stable set for the day, we can fetch IDs and pick deterministically client-side 
-      // or server-side.
-      // A simple robust way for a small app:
-      // 1. Fetch ALL active question IDs.
-      // 2. Use a pseudo-random generator seeded with today's date to pick 3 indices.
-      
-      const { data: allIds } = await supabase
-        .from('questions')
-        .select('id')
-        .eq('is_active', true);
+      // 获取所有题目 ID
+      const response = await api.questions.list({ limit: 1000 }) as any;
+      const allIds = response.questions.map((q: any) => ({ id: q.id }));
 
       if (!allIds || allIds.length === 0) return;
 
-      // Pseudo-random number generator (PRNG) - Mulberry32
-      // See: https://stackoverflow.com/a/47593316
+      // 伪随机数生成器
       const seedNum = parseInt(seed, 10);
       let t = seedNum + 0x6D2B79F5;
       const random = () => {
@@ -47,42 +36,34 @@ export default function DailyChallengePage() {
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
       };
 
-      // Shuffle array using Fisher-Yates with seeded random
+      // Fisher-Yates 洗牌
       const shuffled = [...allIds];
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(random() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
 
-      // Pick top 3
+      // 选取前 3 道题
       const selectedIds = shuffled.slice(0, 3).map(q => q.id);
 
-      // Fetch details for these 3
-      const { data: dailyQuestions } = await supabase
-        .from('questions')
-        .select('*')
-        .in('id', selectedIds);
+      // 获取题目详情
+      const dailyQuestions = await Promise.all(
+        selectedIds.map(id => api.questions.get(id))
+      ) as Question[];
 
       setQuestions(dailyQuestions || []);
 
-      // Check completion status if user is logged in
+      // 检查完成状态
       if (user && dailyQuestions) {
-        // We check if the user has answered these questions *today*? 
-        // Or just ever? "Daily Challenge" usually implies doing them today.
-        // Let's check if there is an attempt created_at >= today.
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
 
-        const { data: attempts } = await supabase
-          .from('question_attempts')
-          .select('question_id')
-          .eq('user_id', user.id)
-          .in('question_id', selectedIds)
-          .gte('created_at', startOfDay.toISOString());
-
-        const completedSet = new Set(attempts?.map(a => a.question_id));
-        // Mark questions as completed in local state if needed, or just count
-        setCompletedCount(completedSet.size);
+        // 简单处理：这里只检查是否答过，不检查时间
+        const attemptsResponse = await api.attempts.list() as any;
+        const attempts = attemptsResponse.attempts || [];
+        const completedSet = new Set(attempts.map((a: any) => a.question_id));
+        const todayCompleted = selectedIds.filter(id => completedSet.has(id));
+        setCompletedCount(todayCompleted.length);
       }
 
     } catch (error) {

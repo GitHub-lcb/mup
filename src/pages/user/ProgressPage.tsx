@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { Category, LearningProgress } from '../../types';
+import { Category } from '../../types';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
+import api from '../../lib/api';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
@@ -28,66 +28,35 @@ export default function ProgressPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      // Fetch categories
-      const { data: categoriesData } = await supabase.from('categories').select('*').order('sort_order');
+      
+      // 获取分类
+      const categoriesData = await api.categories.list() as Category[];
       setCategories(categoriesData || []);
 
       if (!user) return;
 
-      // Calculate progress dynamically from attempts
-      // Note: In a real app with millions of records, we should use the learning_progress table 
-      // and update it via triggers or background jobs. 
-      // For now, let's aggregate from question_attempts for real-time accuracy.
-      
-      const { data: attempts } = await supabase
-        .from('question_attempts')
-        .select('question_id, is_correct, created_at, questions(category_id)')
-        .eq('user_id', user.id);
+      // 获取用户进度
+      const progressResponse = await api.users.progress() as any;
+      const { overall, categories: categoryProgress } = progressResponse;
 
-      const { count: totalQuestionsCount } = await supabase
-        .from('questions')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true);
+      setOverallStats({
+        total: overall.total_questions || 0,
+        answered: overall.answered_questions || 0,
+        correct: overall.correct_answers || 0,
+        accuracy: parseFloat(overall.accuracy) || 0,
+      });
 
-      if (attempts) {
-        // Unique answered questions
-        const uniqueAttempts = new Map();
-        attempts.forEach((a: any) => {
-          // Use latest attempt for correctness? or any correct attempt?
-          // Let's count "mastered" if ever answered correctly.
-          const existing = uniqueAttempts.get(a.question_id);
-          if (!existing || (!existing.is_correct && a.is_correct)) {
-            uniqueAttempts.set(a.question_id, a);
-          }
-        });
-
-        const answeredCount = uniqueAttempts.size;
-        let correctCount = 0;
-        const categoryStats: Record<string, { answered: number, correct: number }> = {};
-
-        uniqueAttempts.forEach((att) => {
-          if (att.is_correct) correctCount++;
-          
-          const catId = att.questions?.category_id;
-          if (catId) {
-            if (!categoryStats[catId]) categoryStats[catId] = { answered: 0, correct: 0 };
-            categoryStats[catId].answered++;
-            if (att.is_correct) categoryStats[catId].correct++;
-          }
-        });
-
-        setOverallStats({
-          total: totalQuestionsCount || 0,
-          answered: answeredCount,
-          correct: correctCount,
-          accuracy: answeredCount > 0 ? (correctCount / answeredCount) * 100 : 0,
-        });
-
-        setProgressData(categoriesData?.map(cat => ({
+      // 构建分类进度数据
+      const progressData = categoriesData.map(cat => {
+        const catProgress = categoryProgress?.find((p: any) => p.id === cat.id);
+        return {
           name: cat.name,
-          ...categoryStats[cat.id] || { answered: 0, correct: 0 }
-        })) || []);
-      }
+          answered: catProgress?.answered_questions || 0,
+          correct: catProgress?.correct_answers || 0,
+        };
+      });
+      
+      setProgressData(progressData);
     } catch (error) {
       console.error('Error fetching progress:', error);
     } finally {

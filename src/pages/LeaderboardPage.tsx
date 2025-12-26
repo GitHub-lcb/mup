@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { Trophy, Medal, Award, User as UserIcon } from 'lucide-react';
+import api from '../lib/api';
 
 interface LeaderboardUser {
   id: string;
@@ -23,35 +23,8 @@ export default function LeaderboardPage() {
   const fetchLeaderboard = async () => {
     try {
       setLoading(true);
-      
-      // Calculate leaderboard data
-      // We need to aggregate correct answers from question_attempts
-      // Note: This is computationally expensive on large datasets. 
-      // In production, use a materialized view or a dedicated 'user_stats' table updated via triggers.
-      // For now, we'll fetch attempts and aggregate in memory or use a SQL view if we created one.
-      // Let's use a SQL query via RPC or just client-side aggregation for simplicity with small data.
-      // Actually, fetching all attempts is too much. 
-      // Let's create a Postgres View for this! It's cleaner.
-      
-      // For now, I'll use a raw query if possible or just fetch users and their stats?
-      // Wait, we don't have a 'score' column on users.
-      // Let's try to do it with a smart query.
-      
-      // Since we can't create Views easily without SQL migration file (which I can do via tool),
-      // I will create a SQL migration to add a view for leaderboard.
-      // But first, let's just scaffold the UI and I'll create the view in next step.
-      
-      // Fallback: Fetch all users and their attempts (only feasible for very small app)
-      // Better: Create a view.
-      
-      // Let's assume we have a view or function `get_leaderboard`.
-      // I will create it in the next tool call.
-      
-      const { data, error } = await supabase.rpc('get_leaderboard');
-      
-      if (error) throw error;
+      const data = await api.leaderboard.get() as LeaderboardUser[];
       setUsers(data || []);
-
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
     } finally {

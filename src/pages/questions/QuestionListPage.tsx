@@ -46,7 +46,7 @@ export default function QuestionListPage() {
       if (searchTerm) params.search = searchTerm;
 
       const response: any = await api.questions.list(params);
-      setQuestions(response.data || []);
+      setQuestions(response.questions || []);
       setTotalCount(response.total || 0);
     } catch (error) {
       console.error('Error fetching questions:', error);

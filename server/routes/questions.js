@@ -133,12 +133,17 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // 将 options 转换为 JSON 字符串（如果是数组）
+    // tags 保持数组格式（PostgreSQL数组类型）
+    const optionsJson = Array.isArray(options) ? JSON.stringify(options) : options;
+    const tagsArray = Array.isArray(tags) ? tags : (tags ? [tags] : []);
+
     const result = await pool.query(
       `INSERT INTO questions 
        (title, content, type, options, correct_answer, explanation, difficulty, category_id, tags, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [title, content, type, options, correct_answer, explanation, difficulty, category_id, tags, is_active]
+      [title, content, type, optionsJson, correct_answer, explanation, difficulty, category_id, tagsArray, is_active]
     );
 
     res.status(201).json(result.rows[0]);
@@ -196,7 +201,7 @@ router.patch('/:id', authMiddleware, async (req, res) => {
     }
     if (options !== undefined) {
       updates.push(`options = $${paramCount}`);
-      values.push(options);
+      values.push(Array.isArray(options) ? JSON.stringify(options) : options);
       paramCount++;
     }
     if (correct_answer !== undefined) {
@@ -221,7 +226,7 @@ router.patch('/:id', authMiddleware, async (req, res) => {
     }
     if (tags !== undefined) {
       updates.push(`tags = $${paramCount}`);
-      values.push(tags);
+      values.push(Array.isArray(tags) ? tags : (tags ? [tags] : []));
       paramCount++;
     }
     if (is_active !== undefined) {

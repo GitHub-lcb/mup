@@ -1,5 +1,7 @@
 // API 客户端配置
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// 生产环境自动使用相对路径 '/api'，开发环境使用 localhost:3000
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api');
 
 // 存储 token 的 key
 const TOKEN_KEY = 'auth_token';

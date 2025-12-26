@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
 import { Category, Question } from '../../types';
 import { ArrowLeft, Save, Plus, Trash } from 'lucide-react';
+import api from '../../lib/api';
 
 export default function AdminQuestionEditor() {
   const { id } = useParams();
@@ -36,35 +36,33 @@ export default function AdminQuestionEditor() {
   }, [id]);
 
   const fetchCategories = async () => {
-    const { data } = await supabase.from('categories').select('*').order('sort_order');
-    if (data) {
-      setCategories(data);
-      if (!isEditMode && data.length > 0) {
+    try {
+      const data = await api.categories.list() as Category[];
+      setCategories(data || []);
+      if (!isEditMode && data && data.length > 0) {
         setFormData(prev => ({ ...prev, category_id: data[0].id }));
       }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
     }
   };
 
   const fetchQuestion = async (questionId: string) => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('questions')
-      .select('*')
-      .eq('id', questionId)
-      .single();
-
-    if (error) {
-      console.error('Error fetching question:', error);
-      alert('加载题目失败');
-      navigate('/admin/questions');
-    } else if (data) {
+    try {
+      const data = await api.questions.get(questionId) as Question;
       setFormData({
         ...data,
         options: Array.isArray(data.options) ? data.options : [],
       });
       setTagsInput(data.tags ? data.tags.join(', ') : '');
+    } catch (error) {
+      console.error('Error fetching question:', error);
+      alert('加载题目失败');
+      navigate('/admin/questions');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,14 +77,9 @@ export default function AdminQuestionEditor() {
       };
 
       if (isEditMode) {
-        const { error } = await supabase
-          .from('questions')
-          .update(payload)
-          .eq('id', id);
-        if (error) throw error;
+        await api.questions.update(id!, payload);
       } else {
-        const { error } = await supabase.from('questions').insert([payload]);
-        if (error) throw error;
+        await api.questions.create(payload);
       }
 
       navigate('/admin/questions');

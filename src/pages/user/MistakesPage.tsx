@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
 import { Question } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { BookX, ArrowRight, Trash2 } from 'lucide-react';
+import api from '../../lib/api';
 
 export default function MistakesPage() {
   const { user } = useAuth();
@@ -19,34 +19,26 @@ export default function MistakesPage() {
   const fetchMistakes = async () => {
     try {
       setLoading(true);
-      // We want to find questions where the *latest* attempt was incorrect, 
-      // OR simply all questions that have ever been answered incorrectly and not yet mastered?
-      // For simplicity and standard "Mistake Book" logic: 
-      // Show questions where the USER has records with is_correct = false.
-      // To be smarter: We can show questions where the *last* attempt was false.
+      const data = await api.attempts.mistakes() as any;
+      const { attempts } = data;
       
-      // Let's fetch all attempts for this user, ordered by time.
-      const { data: attempts, error } = await supabase
-        .from('question_attempts')
-        .select('question_id, is_correct, created_at, questions(*)')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false });
+      if (!attempts || attempts.length === 0) {
+        setMistakes([]);
+        return;
+      }
 
-      if (error) throw error;
-
-      // Filter to find the latest status of each question
+      // 过滤最近一次答错的题目
       const questionStatus = new Map();
       attempts.forEach((attempt: any) => {
         if (!questionStatus.has(attempt.question_id)) {
           questionStatus.set(attempt.question_id, {
-            ...attempt.questions,
+            ...attempt.question,
             last_attempt_at: attempt.created_at,
-            is_mastered: attempt.is_correct // The latest attempt determines status
+            is_mastered: attempt.is_correct
           });
         }
       });
 
-      // Filter only those where is_mastered is false (i.e., last attempt was wrong)
       const wrongQuestions = Array.from(questionStatus.values()).filter(q => !q.is_mastered);
       setMistakes(wrongQuestions);
 
@@ -58,30 +50,15 @@ export default function MistakesPage() {
   };
 
   const removeMistake = async (e: React.MouseEvent, questionId: string) => {
-    e.preventDefault(); // Prevent navigation
+    e.preventDefault();
     if (!confirm('确定要将此题目移出错题本吗？(这意味着您认为已经掌握了它)')) return;
-
-    // To "remove" from mistakes logically, we could either:
-    // 1. Delete the wrong attempts (Bad for history)
-    // 2. Insert a "fake" correct attempt? (A bit hacky)
-    // 3. Or just UI removal?
-    // Let's go with a pragmatic approach: Just hide it from UI state for now, 
-    // or maybe we assume the user "Mastered" it manually.
-    // Ideally, we'd have a 'mastered_questions' table or flag.
-    // For now, let's just delete the history of *wrong* attempts for this question? 
-    // No, data loss.
-    // Let's just remove it from the list in memory to give feedback, 
-    // but persistent removal really requires re-answering it correctly.
-    // Let's guide user: "Please answer it correctly to remove it."
-    // OR: We insert a correct attempt record manually marked as "Manual Mastery"?
     
-    // Let's try inserting a correct record to "fix" the status.
     try {
-      await supabase.from('question_attempts').insert({
-        user_id: user!.id,
+      // 创建一条正确的答题记录
+      await api.attempts.create({
         question_id: questionId,
-        is_correct: true,
         user_answer: 'MANUAL_MARK_AS_MASTERED',
+        is_correct: true,
         time_spent: 0
       });
       setMistakes(prev => prev.filter(q => q.id !== questionId));

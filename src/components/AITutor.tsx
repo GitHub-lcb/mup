@@ -67,7 +67,9 @@ export default function AITutor({ question, userAnswer, correctAnswer, isOpen, o
     setIsLoading(true);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      // 生产环境使用相对路径，开发环境使用 localhost
+      const apiUrl = import.meta.env.VITE_API_URL || 
+        (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api');
       const response = await fetch(`${apiUrl}/chat`, {
         method: 'POST',
         headers: {
